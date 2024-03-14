@@ -1,0 +1,21 @@
+DEVICE_IPCM_SRC += \
+	remoteproc/cambr_remoteproc.o	\
+	remoteproc/remoteproc_core.o	\
+	remoteproc/remoteproc_debugfs.o	\
+	remoteproc/remoteproc_sysfs.o	   \
+	remoteproc/remoteproc_vhost.o	\
+	remoteproc/remoteproc_elf_loader.o	\
+	rpmsg/rpmsg_core.o	\
+	rpmsg/rpmsg_char.o	\
+	rpmsg/cambr_ipc.o \
+	rpmsg/vhost_rpmsg_bus.o \
+	vhost/vhost.o \
+	vhost/vringh.o \
+	cambr_ipcm.o
+
+# vq_callback() run in isr function
+# ccflags-y += -D CALLBACK_IN_INTR_CONTEXT
+# COMMU and IPCM handled it's irq individule by shared irq
+# ccflags-y += -D IPCM_COMMU_SHARED_IRQ
+# IPCM use POLLING
+# ccflags-y += -D IPCM_POLLING_MODE

@@ -1,0 +1,164 @@
+#!/bin/bash
+# $1 can be "dkms_deb" ,"dkms_rpm" or ""
+load_type=$1
+here=`dirname $0`
+module="cambricon"
+device="cambricon_"
+pcie_module="cambricon-drv"
+
+device_count=0
+vendor_id="cabc"
+
+# check the support boards
+mlu_boards=`ls ./lib/firmwares`
+for mlu_board in $mlu_boards; do
+	mlu_id=${mlu_board#*mlu}
+	if [ ${#mlu_id} -lt 4 ]; then
+		device_mlu_ids="${device_mlu_ids} "0${mlu_id}""
+                if [ $mlu_id -eq 370 ]; then
+                        device_mlu_ids="${device_mlu_ids} "0365""
+                elif [ $mlu_id -eq 590 ]; then
+                        device_mlu_ids="${device_mlu_ids} "0585""
+                elif [ $mlu_id -eq 580 ]; then
+                        device_mlu_ids="${device_mlu_ids} "0570""
+                fi
+	else
+		device_mlu_ids="${device_mlu_ids} ${mlu_id}"
+	fi
+done
+
+# caculcate devices count
+for device_mlu_id in $device_mlu_ids; do
+	device_mlu_count=`lspci -n | grep ${vendor_id}":"${device_mlu_id} | wc -l`
+	device_count=`expr $device_count + $device_mlu_count`
+done
+
+# find install directory and package directory
+if [ -z $2 ]; then
+    host_kernel_version=`uname -r`
+else
+    host_kernel_version="$2"
+fi
+if [ "$load_type" == "dkms_deb" ];then
+    host_install_dir=/lib/modules/$host_kernel_version/updates/dkms/
+    if [ ! -d $host_install_dir ]; then
+        host_install_dir=`dirname $host_install_dir`
+    fi
+elif [ "$load_type" == "dkms_rpm" ];then
+    host_install_dir=/lib/modules/$host_kernel_version/extra/
+fi
+host_src_dir=`pwd`
+
+# prepare for insmod (copy *.ko and *.modules)
+function pre_insmod_action()
+{
+    load_type=$1
+    module_array=($pcie_module $cnmon_module $cncodec_module)
+    if [ "$load_type" == "dkms_deb" ];then
+		# copy ko from host_install into pwd
+		cp -rdfp $host_install_dir/$pcie_module.ko* $host_src_dir
+		# insmod ko when boot
+		for index in ${module_array[@]};do
+			if cat /etc/modules | grep "$index">/dev/null;then
+				echo $index" already exists in /etc/modules"
+			else
+				echo $index >> /etc/modules
+			fi
+		done
+    elif [ "$load_type" == "dkms_rpm" ];then
+		# copy ko from host_install into pwd
+		cp -rdfp $host_install_dir/$pcie_module.ko* $host_src_dir
+		if [ -f $pcie_module.ko.xz ]; then
+			xz -d -f $pcie_module.ko.xz
+		fi
+		# insmod ko when boot
+		sudo cp -rdpf cambricon_driver.modules /etc/sysconfig/modules
+    fi
+}
+
+# delete *.ko
+function post_insmod_action()
+{
+    load_type=$1
+    if [ "$load_type" == "dkms_deb" ] || [ "$load_type" == "dkms_rpm" ];then
+        find $host_src_dir/ -name $pcie_module.ko* -delete
+    fi
+}
+
+# install package
+function insmod_mlu()
+{
+	#if [ $device_count -eq 0 ]; then
+	#	 echo "No mlu Card Found!"
+		# exit 0
+	#fi
+
+	# copy firmware
+	FW_IMG_NAME="firmware_sys.img"
+	mlu_boards=`ls ./lib/firmwares`
+	# echo $mlu_boards
+	if [ -z "$mlu_boards" ]; then
+		echo "Error: there is no 'lib/firmwares/mluxxx/', please check it!"
+		exit 1
+	fi
+	for mlu_board in $mlu_boards; do
+		if [ ! -d /lib/firmware/cambricon/$mlu_board ];then
+			mkdir -p /lib/firmware/cambricon/$mlu_board
+		fi
+
+		if [ -f ./lib/firmwares/$mlu_board/${FW_IMG_NAME} ]; then
+			cp -a ./lib/firmwares/$mlu_board/${FW_IMG_NAME} /lib/firmware/cambricon/$mlu_board
+		fi
+	done
+
+	# load driver module ko
+	echo "TO insmod module ${module}."
+	lsmod | grep "${pcie_module/-/_}"
+	if [ $? -eq 0 ]; then
+		echo "Note: The old $pcie_module.ko has been loaded. Reboot is needed!!!"
+		echo "Note: The new $pcie_module.ko will been loaded automatically after system reboot!"
+		exit 1
+	fi
+
+	/sbin/insmod ./$pcie_module.ko virtcon_en=1 $*
+	if [ $? != 0 ]; then
+		which getenforce > /dev/null
+		if [ $? == 0 ]; then
+			selin=`getenforce`
+			if [ $selin == "Enforcing" ]; then
+				echo "This problem is usually caused by selinux permission settings, please check your system settings."
+				echo "Current selinux settings is $selin."
+				echo "Use shell command 'setenforce 0' may temporary close the selinux permission check."
+			else
+				echo "Please check your permission, and make sure MLU board is installed correctly."
+			fi
+		else
+		    echo "Unkown selinux settings, please check your permission."
+		fi
+		echo "See the Cambricon_Driver_User_guide.pdf for more information."
+		exit 1
+	fi
+
+	major=`cat /proc/devices | grep cambricon | wc -l`
+	if [ "$major" -ne 0 ]; then
+	    echo Check cambricon driver install done.
+    else
+	    echo Failed to insmod ${module}, please check dmesg log.
+	    exit 0;
+	fi
+
+	# change device file permission
+	dev_file=`ls /dev/ | grep ${device}dev*`
+	echo $dev_file
+	for mlu_dev_name in ${dev_file}
+	do
+		chgrp root /dev/$mlu_dev_name
+		chmod 777  /dev/$mlu_dev_name
+	done
+}
+
+# prepare for insmod ko on platfrom
+pre_insmod_action $load_type
+insmod_mlu
+# clean the dirty for make "deb" or "rpm" package
+post_insmod_action $load_type

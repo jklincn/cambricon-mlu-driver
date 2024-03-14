@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# No tunable parameters, dagmem is autoconfiguring and uses /etc/modules
+# for parameters
+#
+pcie_module="cambricon-drv"
+sudo /sbin/rmmod $pcie_module $* || exit 2

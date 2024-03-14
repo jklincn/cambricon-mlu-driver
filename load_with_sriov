@@ -1,0 +1,14 @@
+#!/bin/sh
+
+here=`dirname $0`
+module="cambricon"
+device="cambricon_"
+pcie_module="cambricon-drv"
+
+device_count=0
+vendor_id="17cd"
+
+echo insmod module
+
+sudo /sbin/insmod ./$pcie_module.ko $* sriov_en=1 || exit 1
+

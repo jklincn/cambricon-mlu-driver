@@ -1,0 +1,65 @@
+#!/bin/sh
+#set -x
+
+NAME=MODULE_NAME
+VERSION=MODULE_VERSION
+
+set -e
+################################################################
+#the following script will be executed before deb was uninstalled
+################################################################
+case "$1" in
+    remove|upgrade|deconfigure)
+      if [ -d /usr/src/${NAME}-${VERSION} ];then
+          find /usr/src/${NAME}-${VERSION}/ -name "*.ko*" -delete
+      fi
+
+      if [ -f "/usr/bin/cnmon" ]; then
+           rm -rf /usr/bin/cnmon
+      fi
+
+      if [ -d "/usr/bin/cnmon" ]; then
+           rm -rf /usr/bin/cnmon
+      fi
+
+      if [ -e "/usr/bin/cambricon-bug-report.sh" ]; then
+           rm -rf /usr/bin/cambricon-bug-report.sh
+      fi
+
+      if [ -e "/usr/lib/systemd/system-sleep/cambricon_mlu_sleep.sh" ]; then
+           rm -rf /usr/lib/systemd/system-sleep/cambricon_mlu_sleep.sh
+      fi
+      if [ -e "/lib/systemd/system-sleep/cambricon_mlu_sleep.sh" ]; then
+           rm -rf /lib/systemd/system-sleep/cambricon_mlu_sleep.sh
+      fi
+
+      if [  "`dkms status -m $NAME`" ]; then
+         dkms remove -m $NAME -v $VERSION --all
+      fi
+
+      if [ -f /etc/udev/rules.d/99-cambricon-drv.rules ]; then
+         rm -f /etc/udev/rules.d/99-cambricon-drv.rules
+      fi
+
+      if [ -f /etc/modprobe.d/cambricon-drv.conf ]; then
+         rm -f /etc/modprobe.d/cambricon-drv.conf
+      fi
+	  if [ -d /etc/udev/script/cambricon ]; then
+         rm -rf /etc/udev/script/cambricon
+      fi
+    ;;
+
+    failed-upgrade)
+    ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+
+

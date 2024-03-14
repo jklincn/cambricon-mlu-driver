@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+# No tunable parameters, dagmem is autoconfiguring and uses /etc/modules
+# for parameters
+#
+# needed by dkms
+# $1 can be "dkms_deb" ,"dkms_rpm" or ""
+load_type=$1
+if [ -z $2 ]; then
+    host_kernel_version=`uname -r`
+else
+    host_kernel_version="$2"
+fi
+pcie_module="cambricon-drv"
+system_module_dir=/lib/modules/$host_kernel_version/
+
+if [ "$load_type" == "dkms_deb" ];then
+    host_install_dir=/lib/modules/$host_kernel_version/updates/dkms/
+    #Some debian system do not include dkms directory
+    if [ ! -d $host_install_dir ]; then
+        host_install_dir=`dirname $host_install_dir`
+    fi
+elif [ "$load_type" == "dkms_rpm" ];then
+    host_install_dir=/lib/modules/$host_kernel_version/extra/
+fi
+
+function rmmod_module()
+{
+    sudo /sbin/rmmod -s $pcie_module
+}
+
+function remove_module_file()
+{
+    load_type=$1
+    module_array=($pcie_module $cnmon_module $cncodec_module)
+    if [ "$load_type" == "dkms_deb" ];then
+        # remove all kos in below system dir
+        for index in ${module_array[@]};do
+            find $system_module_dir -name $index".ko" -delete
+        done
+        # remove ko config from system "/etc/modules"
+        for index in ${module_array[@]};do
+            sed -i "/$index/d" /etc/modules
+        done
+    elif [ "$load_type" == "dkms_rpm" ];then
+    	# remove all kos in below system dir
+    	for index in ${module_array[@]};do
+    	    find $system_module_dir -name $index".ko*" -delete
+    	    if [ -d $host_install_dir ];then
+    	        find $host_install_dir -name $index".ko*" -delete
+    	    fi
+    	done
+    	# remove ko config from system "/etc/sysconfig/modules"
+    	rm -rf /etc/sysconfig/modules/cambricon_driver.modules
+    fi
+    # After remove these kernel modules' dependence.
+    sudo depmod -a
+}
+
+if [ X"$load_type" == X"" ];then
+    rmmod_module
+else
+    remove_module_file $load_type
+fi

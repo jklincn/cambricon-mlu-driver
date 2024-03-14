@@ -1,0 +1,6 @@
+CHECKPATCH_HOME="$(cd "$(dirname "$0")" && cd .. && pwd)"
+
+$CHECKPATCH_HOME/checkpatch/checkpatch.pl --no-tree --no-signoff \
+	--showfile	--show-types --ignore BRACES,FILE_PATH_CHANGES,VOLATILE,AVOID_EXTERNS,LINUX_VERSION_CODE \
+			--ignore EXECUTE_PERMISSIONS,EXPORTED_WORLD_WRITABLE,OOM_MESSAGE,EMAIL_SUBJECT,COMMIT_LOG_LONG_LINE \
+            --max-line-length=120 -g HEAD

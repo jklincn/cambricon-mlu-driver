@@ -1,0 +1,9 @@
+Usage
+
+pre-commit:	copy this script to path .git/hooks/, the coding style 
+check will be exec auto when 'git commit'.
+
+check_with_params: Use this script directly when precheck in.
+
+checkpatch.pl: use this script must with file 'spelling.txt' and 
+'const_structs.chenkpatch' in same path.

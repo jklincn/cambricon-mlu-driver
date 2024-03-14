@@ -1,0 +1,7 @@
+#!/bin/sh
+pcie_module="cambricon-drv"
+
+/sbin/modinfo -F filename $pcie_module > /dev/null 2>&1
+if [ $? -eq 0 ];then
+	/sbin/modprobe $pcie_module
+fi

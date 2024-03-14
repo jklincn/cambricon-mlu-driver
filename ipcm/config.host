@@ -1,0 +1,24 @@
+HOST_IPCM_SRC += \
+	ipcm/remoteproc/cambr_remoteproc.o	\
+	ipcm/remoteproc/remoteproc_core.o	\
+	ipcm/remoteproc/remoteproc_debugfs.o	\
+	ipcm/remoteproc/remoteproc_sysfs.o	   \
+	ipcm/remoteproc/remoteproc_virtio.o	\
+	ipcm/remoteproc/remoteproc_elf_loader.o	\
+	ipcm/rpmsg/rpmsg_core.o	\
+	ipcm/rpmsg/rpmsg_char.o	\
+	ipcm/rpmsg/cambr_ipc.o	\
+	ipcm/rpmsg/virtio_rpmsg_bus.o \
+	ipcm/virtio/virtio.o \
+	ipcm/virtio/virtio_ring.o \
+	ipcm/cambr_ipcm.o
+
+ccflags-y += -D RPMSG_MASTER_PCIE_RC
+ccflags-y += -D IN_CNDRV_HOST
+
+# vq_callback() run in isr function
+# ccflags-y += -D CALLBACK_IN_INTR_CONTEXT
+# COMMU and IPCM handled it's irq individule by shared irq
+# ccflags-y += -D IPCM_COMMU_SHARED_IRQ
+# IPCM use POLLING
+# ccflags-y += -D IPCM_POLLING_MODE

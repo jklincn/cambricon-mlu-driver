@@ -1,0 +1,252 @@
+#include <linux/delay.h>
+#include <linux/printk.h>
+
+#include "cndrv_core.h"
+
+#include "cpu_subsys_ctrl_c20.h"
+#include "cpu_subsys_gt_c20.h"
+
+// config
+#define VPU_INDEX_START		(0)
+#define VPU_INDEX_NUM		(6)
+
+#define SYS_CLK_CTRL	0x7408
+#define PMU_SYS_RST_CTRL	(0x7428)
+
+#define CPU_SYS_CLK_CTRL	(0x740C)
+#define CPU_SYS_RST_CTRL	(0x742C)
+
+#define VPU_SYS_CLK_CTRL	(0x7410)
+#define VPU_SYS_RST_CTRL	(0x7430)
+
+#define JOB_SCH_CLK_CTRL	(0x600000 + 0x108)
+#define CPU_CORE_CLK_CTRL	(0x600000 + 0x100)
+
+extern void reg_write32(void *bus_set, unsigned long offset, u32 val);
+extern u32 reg_read32(void *bus_set, unsigned long offset);
+
+#define CPUSYS_CTRLEN	(2)
+int c20l_asic_boot_pre(struct cn_core_set *core)
+{
+	unsigned int val, idle_val;
+	int loop_flag_1 = 1;
+	int loop_time = 0;
+	int ret = 0;
+
+	val = reg_read32(core->bus_set, CPU_SYS_CLK_CTRL);
+	if (val & CPUSYS_CTRLEN) {
+		/* step-1: bus clear */
+		val = (CPU_SUBSYS_CTRL__CBW_BUS_CLEAR__CBW0_BUS_CLEAR__MASK |		\
+			CPU_SUBSYS_CTRL__CBW_BUS_CLEAR__CBW1_BUS_CLEAR__MASK |		\
+			CPU_SUBSYS_CTRL__CBW_BUS_CLEAR__CBWMP_BUS_CLEAR__MASK);
+
+		reg_write32(core->bus_set, CTRL_BASE_ADDR + CPU_SUBSYS_CTRL_CBW_BUS_CLEAR_ADDR, val);
+		/* step-1: bus clear */
+
+		/* step-2: wait bus idle */
+		idle_val = (CPU_SUBSYS_CTRL__BUSIDLE__BW0_BUS_IDLE__MASK |		\
+			CPU_SUBSYS_CTRL__BUSIDLE__BW1_BUS_IDLE__MASK |		\
+			CPU_SUBSYS_CTRL__BUSIDLE__BWMP_BUS_IDLE__MASK |		\
+			CPU_SUBSYS_CTRL__BUSIDLE__ETR_AXIBUS_IDLE__MASK);
+
+		while(loop_flag_1) {
+			udelay(100);
+			val = reg_read32(core->bus_set, CTRL_BASE_ADDR + CPU_SUBSYS_CTRL_BUSIDLE_ADDR);
+			if (val == idle_val) {
+				loop_flag_1 = 0;
+			}
+			loop_time = loop_time + 1;
+			if ((loop_time % 1000) == 0) {
+				printk("Error, TIMEOUT find bus idle: loop_time = %d\n", loop_time);
+				ret = -1;
+				break;
+			}
+
+		}
+		//pmu reset cpu
+		reg_write32(core->bus_set, CPU_SYS_RST_CTRL, 0x10000);//
+		//pmu cpu de-assert
+		reg_write32(core->bus_set, CPU_SYS_RST_CTRL, 0x10001);//
+
+		/* vpu-system reset 0->1 */
+		reg_write32(core->bus_set, VPU_SYS_RST_CTRL, 0x3f0000);
+		reg_write32(core->bus_set, VPU_SYS_RST_CTRL, 0x3f003f);
+		mdelay(10);
+
+		//FIXME: readback for waiting pmu subsys is ok
+		val = reg_read32(core->bus_set, CPU_SYS_RST_CTRL);
+		return 1;
+	} else {
+		//reg_write32(core->bus_set, PMU_CPU_RST_OFF, 0);
+		//reg_write32(core->bus_set, PMU_CPU_RST_OFF, 1);
+
+		/* enable system clock */
+		reg_write32(core->bus_set, SYS_CLK_CTRL, 0xf000f);
+		/* system reset 0->1, inter_fabric_rst_ctrl and monitor enable */
+		reg_write32(core->bus_set, PMU_SYS_RST_CTRL, 0x60006);
+
+		/* enable cpu system clock */
+		reg_write32(core->bus_set, CPU_SYS_CLK_CTRL, 0x30003);
+
+		/* cpu system reset 0->1 */
+		reg_write32(core->bus_set, CPU_SYS_RST_CTRL, 0x10000);
+		reg_write32(core->bus_set, CPU_SYS_RST_CTRL, 0x10001);
+		mdelay(10);
+
+		/* enable cpu-core clock */
+		reg_write32(core->bus_set, CPU_CORE_CLK_CTRL, 0xffff);
+		reg_read32(core->bus_set, CPU_CORE_CLK_CTRL);
+	}
+	return ret;
+}
+
+int c20l_asic_cpu_boot(struct cn_core_set *core, uint64_t boot_entry)
+{
+	uint32_t val;
+
+	printk("\n");
+	pr_info("#################################\n");
+	pr_info("# ACPU boot, entry point 0x%llx\n", boot_entry);
+	pr_info("###################################\n");
+
+	/* step-3-2: assign boot cpu reset address */
+	/* only cpu0 assignment */
+	reg_write32(core->bus_set, RVBADDR0_L, boot_entry);
+	reg_write32(core->bus_set, RVBADDR0_H, boot_entry >> 32);
+	reg_write32(core->bus_set, RVBADDR1_L, boot_entry);
+	reg_write32(core->bus_set, RVBADDR1_H, boot_entry >> 32);
+
+	/* FIXME: CBWBYPASS off:B8 will set 0 ?*/
+
+	/* step-3-3: peripheral address configure */
+	reg_write32(core->bus_set, ASTARTMP_ADDR, 0x80000);
+	reg_write32(core->bus_set, AENDMP_ADDR, 0x800F0);
+
+	/* step-3-4: open clock*/
+	val = CPU_SUBSYS_CTRL__CRGREGEN0__CORE0_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CORE1_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CORE2_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CORE3_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CORE4_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CORE5_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPU_ACLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPU_CS_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPU_DAP_PCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPU_GIC_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPU_PERI_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPU_SCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPU_SUBSYS_LPC_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPUSYS_CFGNOC_MSTBUS_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CPUSYS_NOC_MSTBUS_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN0__CS_TOP_CLK_REG_EN__MASK;
+
+	reg_write32(core->bus_set, CRGREGEN0_ADDR, val);
+
+	/* read back for checking */
+	reg_read32(core->bus_set, CRGREGEN0_ADDR);
+
+	val = CPU_SUBSYS_CTRL__CRGREGEN1__CS_TOP_PCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__CS_TOP_TRACEIN_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__DAP_PCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GENERIC_TIMER_CCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GENERIC_TIMER_CNT_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GENERIC_TIMER_PCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GIC_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GTS_G2B_B_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GTS_G2B_G_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GTS_GEN_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__GTS_GEN_CNT_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__JOBSCH_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__U0_AXI_MONITOR_ACLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__U0_AXI_MONITOR_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__U1_AXI_MONITOR_ACLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__U1_AXI_MONITOR_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__UART0_PCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__UART0_UARTCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__UART1_PCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__UART1_UARTCLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__SYSTIMER_CNT_CLK_REG_EN__MASK | \
+		CPU_SUBSYS_CTRL__CRGREGEN1__SYSTIMER_PCLK_REG_EN__MASK;
+
+	reg_write32(core->bus_set, CRGREGEN1_ADDR, val);
+
+	/* read back for checking */
+	reg_read32(core->bus_set, CRGREGEN1_ADDR);
+
+	/* step-5: de-assert reset */
+	val = (CPU_SUBSYS_CTRL__BUSRSTCTRL__CPUCFGNOC_CFG_CSSLV_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__BUSRSTCTRL__CPUCFGNOC_CFG_DAP_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__BUSRSTCTRL__CPUCFGNOC_CFG_GICSLV_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__BUSRSTCTRL__CPUCFGNOC_CFG_JOBSCH_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__BUSRSTCTRL__CPUCFGNOC_MST_CPUPERI_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__BUSRSTCTRL__CPUCFGNOC_MST_JOBSCH_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__BUSRSTCTRL__CPUSYSNOC_MST_CSSLV_RESETN_I__MASK);
+	reg_write32(core->bus_set, BUSRSTCTRL_ADDR, val);
+
+	val = (CPU_SUBSYS_CTRL__OTHERRSTCTRL__AXI_MON0_A_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__AXI_MON0_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__AXI_MON1_A_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__AXI_MON1_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CPU_BW0_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CPU_BW1_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CPUSYS_CFGNOC_MSTBUS_RESETN_I__MASK |	\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CPUSYS_CS_TOP_STMRESETN_I__MASK |	\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CPUSYS_LPC_RESETN_I__MASK |	\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CPUSYS_NOC_MSTBUS_RESETN_I__MASK |	\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CS_TOP_PRESETN_I__MASK |	\
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CS_TOP_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__CS_TOP_TRACE_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GIC_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GT_C_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GT_CNT_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GT_P_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GTS_G2B_B_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GTS_G2B_G_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GTS_GEN_C_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__GTS_GEN_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__JOBSCHEDULER_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__UART0_PRESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__UART0_UARTRESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__UART1_PRESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__UART1_UARTRESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__MBIST_CTL_PRESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__SYSTIMER_CNT_RESETN_I__MASK | \
+		CPU_SUBSYS_CTRL__OTHERRSTCTRL__SYSTIMER_PRESETN_I__MASK);
+
+	reg_write32(core->bus_set, OTHER_RSTCTRL_ADDR, val);
+
+	/* enable system counter */
+	val = GENERIC_TIMER_CTRL_CNTCR_CTRL_CNTCR_EN_MASK;
+	reg_write32(core->bus_set, CNTCR_ADDR, val);
+
+	/* cpu non-allocate on LLC  */
+	reg_write32(core->bus_set, CLUSTER_CACHE_M0_BYP, CLUSTER_CACHE_M0_BYP_VAL);
+	reg_write32(core->bus_set, CLUSTER_AWCACHE_M0, CLUSTER_AWCACHE_M0_NON_ALLOCATE);
+	reg_write32(core->bus_set, CLUSTER_ARCACHE_M0, CLUSTER_ARCACHE_M0_NON_ALLOCATE);
+	reg_write32(core->bus_set, CLUSTER_CACHE_M1_BYP, CLUSTER_CACHE_M1_BYP_VAL);
+	reg_write32(core->bus_set, CLUSTER_AWCACHE_M1, CLUSTER_AWCACHE_M1_NON_ALLOCATE);
+	reg_write32(core->bus_set, CLUSTER_ARCACHE_M1, CLUSTER_ARCACHE_M1_NON_ALLOCATE);
+
+	// second de-assert cluster pro rest
+	val = (CPU_SUBSYS_CTRL__CPURSTCTRL__CLUSTER_SPOR_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CORE0_CPUPOR_RESETN_I__MASK |
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CORE1_CPUPOR_RESETN_I__MASK |
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CORE2_CPUPOR_RESETN_I__MASK |
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CORE3_CPUPOR_RESETN_I__MASK);
+
+	reg_write32(core->bus_set, RSTCTRL_ADDR, val);
+
+	val |= (CPU_SUBSYS_CTRL__CPURSTCTRL__CLUSTER_AT_RESETN_I__MASK | 		\
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CLUSTER_GIC_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CLUSTER_MBIST_RESETN_I__MASK |	\
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CLUSTER_P_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CLUSTER_PERI_RESETN_I__MASK |	\
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CLUSTER_S_RESETN_I__MASK |		\
+		CPU_SUBSYS_CTRL__CPURSTCTRL__CORE0_CORE_RESETN_I__MASK);
+
+
+	reg_write32(core->bus_set, RSTCTRL_ADDR, val);
+
+	return 0;
+}
+

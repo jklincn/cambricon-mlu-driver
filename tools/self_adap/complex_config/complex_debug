@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+if [ $# -lt 3 ]; then
+	echo "FAILED"
+	echo "Usage"
+	echo "$0   name  loopCnt  forceRet"
+	exit 1
+fi
+
+name=$1
+loop=$2
+ret=$3
+
+cnt=0
+while true
+do
+	sleep 1
+	let "cnt++"
+	echo "$name ------ $cnt"
+	if [ $cnt -ge 6 ]; then
+		echo "$name = FAIL"
+	fi
+	if [ $cnt -ge $loop ]; then
+		break
+	fi
+done
+
+exit $ret

@@ -1,0 +1,20 @@
+###########################################################
+# Set the include-path according to the defined interface.
+###########################################################
+include $(src)/config.device
+
+ccflags-y += -Wall -Werror
+
+module-y += $(DEVICE_IPCM_SRC)
+
+TARGET_MODULE := ipcm_drv
+
+obj-m += $(TARGET_MODULE).o
+
+#obj-m += test/kernelspace/
+#obj-y += lib/
+#obj-y += daemon/
+#obj-y += test/userspace/
+
+#$(info "obj=${module-y}")
+$(TARGET_MODULE)-objs += $(module-y)

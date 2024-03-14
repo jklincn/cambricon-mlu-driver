@@ -1,0 +1,26 @@
+## Add KERNELRELEASE for multi-version kernel driver build issue
+KERNELRELEASE ?=$(shell uname -r)
+KERN_DIR ?= /lib/modules/${KERNELRELEASE}/build
+ccflags-y += -DIN_CNDRV_HOST
+STRIP ?= strip
+
+ccflags-y += -I../../../../include
+
+PHONY +=ipcm_ipc_demo
+
+ipcm_ipc_demo:
+	$(OPTION) $(MAKE) $(FLAG) -C $(KERN_DIR) M=$(PWD) modules && $(STRIP) -S rpmsg_ipc_demo.ko
+
+obj-m := rpmsg_ipc_demo.o
+
+PHONY += clean
+clean:
+	rm -rf *.ko
+	@find . -type f -name '*.o' -delete
+	@find . -type f -name '*.mod' -delete
+	@find . -type f -name '*.cmd' -delete
+	rm -rf *.mod.c
+	@rm -f Module.symvers
+	@rm -f modules.order
+
+.PHONY: $(PHONY)

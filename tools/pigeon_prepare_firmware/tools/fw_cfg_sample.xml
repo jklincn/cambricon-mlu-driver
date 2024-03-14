@@ -1,0 +1,28 @@
+<ROOT>
+	<BOARD name="Cambricon-ce3225M2" />
+
+	<IMAGE>
+		<image name="bl31.bin" />
+		<layout load_address="0x0" size="0x7000" />  <!--load bl31.bin to 0x0-->
+	</IMAGE>
+
+	<IMAGE>
+		<image name="Image" />
+		<layout load_address="0x880000" size="0x8aa000" />  <!--load Image to 0x88_0000-->
+	</IMAGE>
+
+	<IMAGE>
+		<image name="cambr-ce3225v100-emmc.dtb" />
+		<layout load_address="0x3880000" size="0x4000" />  <!--load cambr-ce3225v100-emmc.dtb to 0x388_0000-->
+	</IMAGE>
+
+	<IMAGE>
+		<image name="rootfs_ext4.img" />
+		<layout load_address="0x40000000" size="0x2800000" />  <!--load rootfs_ext4.img to 0x4000_0000-->
+	</IMAGE>
+
+	<IMAGE>
+		<image name="ext4fs.img" />
+		<layout load_address="0x48000000" size="0x4000000" />  <!--load rootfs_ext4.img to 0x4800_0000-->
+	</IMAGE>
+</ROOT>

@@ -1,0 +1,134 @@
+#!/bin/bash
+#set -x
+# Copyright (C) 2002-2005 Flavio Stanchina
+# Copyright (C) 2005-2006 Aric Cyr
+# Copyright (C) 2007 Mario Limonciello
+# Copyright (C) 2009 Alberto Milone
+
+set -e
+
+NAME=MODULE_NAME
+VERSION=MODULE_VERSION
+PACKAGE_NAME=$NAME-dkms
+DEB_NAME=$(echo $PACKAGE_NAME | sed 's,_,-,')
+CVERSION=`dpkg-query -W -f='${Version}' $DEB_NAME | awk -F "-" '{print $1}' | cut -d\: -f2`
+ARCH=`dpkg --print-architecture`
+
+dkms_configure () {
+	for POSTINST in /usr/lib/dkms/common.postinst "/usr/share/$PACKAGE_NAME/postinst"; do
+		if [ -f "$POSTINST" ]; then
+			"$POSTINST" "$NAME" "$CVERSION" "/usr/share/$PACKAGE_NAME" "$ARCH" "$2"
+            dkms status -m "$NAME" -v "$CVERSION" | grep installed
+            if [ $? -eq 0 ]; then
+                lsmod | grep "cambricon"
+                if [ $? -eq 0 ]; then
+                    echo "---------------------------------------------------------------"
+                    echo "Driver installation is successful, it is recommended to restart"
+                    echo "the machine to ensure that the driver works normally."
+                    echo "---------------------------------------------------------------"
+                else
+                    echo "--------------------------------------------------------------------"
+                    echo "Driver installation is successful, but cambricon module load failed."
+                    echo "Please check your permission, system setting and dmesg log for more"
+                    echo "information."
+                    echo "--------------------------------------------------------------------"
+                fi
+                exit 0
+            else
+                echo "---------------------------------------------------------------------"
+                echo "Driver installation is failed. Please make sure using the appropriate"
+                echo "operating system version. See the Cambricon_Driver_User_guide.pdf"
+                echo "for more information."
+                echo "---------------------------------------------------------------------"
+                exit 1
+            fi
+		fi
+		echo "WARNING: $POSTINST does not exist." >&2
+	done
+	echo "ERROR: DKMS version is too old and $PACKAGE_NAME was not" >&2
+	echo "built with legacy DKMS support." >&2
+	echo "You must either rebuild $PACKAGE_NAME with legacy postinst" >&2
+	echo "support or upgrade DKMS to a more current version." >&2
+	return 1
+}
+################################################################
+# the following script will be executed after deb was installed
+pcie_module="cambricon-drv"
+if [ -f "/usr/src/$NAME-$VERSION/load_auto" ]; then
+    chmod 777 /usr/src/$NAME-$VERSION/load_auto
+fi
+if [ -f "/usr/src/$NAME-$VERSION/unload_auto" ]; then
+    chmod 777 /usr/src/$NAME-$VERSION/unload_auto
+fi
+
+if [ -f "/usr/src/$NAME-$VERSION/cnmon" ]; then
+    mv /usr/src/$NAME-$VERSION/cnmon /usr/bin/
+    chmod 777 /usr/bin/cnmon
+fi
+
+if [ -f "/usr/src/$NAME-$VERSION/tools/cambricon-bug-report.sh" ]; then
+    mv /usr/src/$NAME-$VERSION/tools/cambricon-bug-report.sh /usr/bin/
+    chmod 777 /usr/bin/cambricon-bug-report.sh
+fi
+if [ -f "/usr/src/$NAME-$VERSION/tools/cambricon_mlu_sleep.sh" ];then
+    if [ -d "/usr/lib/systemd/system-sleep" ]; then
+        cp /usr/src/$NAME-$VERSION/tools/cambricon_mlu_sleep.sh  /usr/lib/systemd/system-sleep/
+        chmod 777 /usr/lib/systemd/system-sleep/cambricon_mlu_sleep.sh
+    elif [ -d "/lib/systemd/system-sleep" ]; then
+        cp /usr/src/$NAME-$VERSION/tools/cambricon_mlu_sleep.sh  /lib/systemd/system-sleep/
+        chmod 777 /lib/systemd/system-sleep/cambricon_mlu_sleep.sh
+    fi
+fi
+FW_IMG_NAME="firmware_sys.img"
+mlu_boards=`ls /usr/src/$NAME-$VERSION/lib/firmwares/`
+# echo $mlu_boards
+if [ -z "$mlu_boards" ]; then
+	echo "Error: there is no '/usr/src/$NAME-$VERSION/lib/firmwares/mluxxx/', please check it!"
+	exit 1
+fi
+for mlu_board in $mlu_boards; do
+	if [ ! -d /lib/firmware/cambricon/$mlu_board ];then
+		mkdir -p /lib/firmware/cambricon/$mlu_board
+	fi
+
+	if [ -f /usr/src/$NAME-$VERSION/lib/firmwares/$mlu_board/${FW_IMG_NAME} ]; then
+		cp -a /usr/src/$NAME-$VERSION/lib/firmwares/$mlu_board/${FW_IMG_NAME} /lib/firmware/cambricon/$mlu_board
+	fi
+done
+
+if [ ! -d /etc/udev/rules.d ]; then
+  mkdir -p /etc/udev/rules.d
+fi
+
+echo 'KERNEL=="cambricon_dev*", MODE="0666"' > /etc/udev/rules.d/99-cambricon-drv.rules
+echo 'KERNEL=="cambricon_ipcm*", MODE="0666"' >> /etc/udev/rules.d/99-cambricon-drv.rules
+echo 'KERNEL=="cambricon-caps/cap*", MODE="0666"' >> /etc/udev/rules.d/99-cambricon-drv.rules
+
+if [ X"$MLU_RUNMODE" == X"PF" ]; then
+    echo "Install cambricon Virt $MLU_RUNMODE driver into system!"
+    cat /usr/src/$NAME-$VERSION/dkms/cambricon-drv.conf > /etc/modprobe.d/cambricon-drv.conf
+    echo "options cambricon-drv sriov_en=1" >> /etc/modprobe.d/cambricon-drv.conf
+else
+    cat /usr/src/$NAME-$VERSION/dkms/cambricon-drv.conf > /etc/modprobe.d/cambricon-drv.conf
+fi
+################################################################
+case "$1" in
+	configure)
+		dkms_configure
+	;;
+
+	abort-upgrade|abort-remove|abort-deconfigure)
+	;;
+
+	*)
+		echo "postinst called with unknown argument \`$1'" >&2
+		exit 1
+	;;
+esac
+
+# dh_installdeb will replace this with shell code automatically
+# generated by other debhelper scripts.
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,14 @@
+环境依赖:
+
+MLNX_OFED_LINUX
+cntoolkit
+cmabricon mlu driver
+
+Build 指令:
+
+./autogen.sh && ./configure MLU_H_PATH=/usr/local/neuware/include/cn_api.h && make -j
+
+运行：
+export NEUWARE_HOME="/usr/local/neuware"
+export PATH="${NEUWARE_HOME}/bin:${PATH}"
+export LD_LIBRARY_PATH="${NEUWARE_HOME}/lib64:${LD_LIBRARY_PATH}"
