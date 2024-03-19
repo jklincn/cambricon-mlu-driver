@@ -1,1 +1,11 @@
 lib/firmwares
+*.ko
+*.o
+*.mod
+*.cmd
+*.mod.c
+*.o.ur-safe
+*.o.d
+Module.symvers
+modules.order
+pre_compile
