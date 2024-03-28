@@ -1,0 +1,7 @@
+bw_sample/bandwidth_data
+bw_sample/bw_sample
+bw_sample/p2p_sample
+self_adap/complex
+self_adap/d2d_copy
+self_adap/p2p_copy
+self_adap/pcie_copy

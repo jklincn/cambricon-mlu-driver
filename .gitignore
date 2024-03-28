@@ -9,3 +9,5 @@ lib/firmwares
 Module.symvers
 modules.order
 pre_compile
+**/compile_commands.json
+**/.clangd
