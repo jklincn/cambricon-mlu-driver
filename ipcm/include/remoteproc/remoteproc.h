@@ -79,7 +79,7 @@ struct resource_table {
 	u32 num;
 	u32 reserved[2];
 	u32 offset[];
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct fw_rsc_hdr - firmware resource entry header
@@ -93,7 +93,7 @@ struct resource_table {
 struct fw_rsc_hdr {
 	u32 type;
 	u8 data[];
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * enum fw_resource_type - types of resource entries
@@ -179,7 +179,7 @@ struct fw_rsc_carveout {
 	u32 flags;
 	u32 reserved;
 	u8 name[32];
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct fw_rsc_devmem - iommu mapping request
@@ -217,7 +217,7 @@ struct fw_rsc_devmem {
 	u32 flags;
 	u32 reserved;
 	u8 name[32];
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct fw_rsc_trace - trace buffer declaration
@@ -240,7 +240,7 @@ struct fw_rsc_trace {
 	u32 len;
 	u32 reserved;
 	u8 name[32];
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct fw_rsc_vdev_vring - vring descriptor entry
@@ -265,7 +265,7 @@ struct fw_rsc_vdev_vring {
 	u32 num;
 	u32 notifyid;
 	u64 pa;
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct fw_rsc_vdev - virtio device header
@@ -312,7 +312,7 @@ struct fw_rsc_vdev {
 	u8 num_of_vrings;
 	u8 reserved[2];
 	struct fw_rsc_vdev_vring vring[];
-} __packed;
+} __attribute__((__packed__));
 
 struct rproc;
 

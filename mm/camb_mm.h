@@ -177,7 +177,7 @@ struct free_mem_list {
 struct ob_data_payload {
 	__le64 pci_addr;
 	__le32 size;
-} __packed;
+} __attribute__((__packed__));
 
 #define OB_DATA_MAP_SMMU_SOF             (0x01)
 #define OB_DATA_MAP_SMMU_MOF             (0x02)
@@ -200,7 +200,7 @@ struct ob_data_rpc_t {
 	unsigned short s_cnt;
 	unsigned short cnt;
 	struct ob_data_payload data[1];
-} __packed;
+} __attribute__((__packed__));
 
 enum mem_ob_cmd {
 	OB_CMD_CONFIG_OB = 1,

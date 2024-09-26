@@ -269,7 +269,7 @@ struct perf_cfg_data {
 	struct perf_cfg_tasks *mem_perf;
 	__u64 mem_num;
 	__u64 mem_size;
-}__packed;
+}__attribute__((__packed__));
 
 struct __perf_mode_cfg {
 	__u32 perf_ctrl;
@@ -280,7 +280,7 @@ struct __perf_mode_cfg {
 			__u32 collection_mode;
 			__u32 performance_mode;
 			__u64 buffer_size;
-		}__packed;
+		}__attribute__((__packed__));
 		struct {
 			__u32 data_size;
 			__u32 debug_data_size;
@@ -288,9 +288,9 @@ struct __perf_mode_cfg {
 			struct perf_cfg_tasks *debug_ptr;
 			__u64 ts_buffer_size;
 			__u64 mem_buffer_size;
-		}__packed;
-	}__packed;
-}__packed;
+		}__attribute__((__packed__));
+	}__attribute__((__packed__));
+}__attribute__((__packed__));
 
 void monitor_PrintLog(const char *fmt, ...);
 

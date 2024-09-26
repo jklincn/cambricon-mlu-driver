@@ -17,7 +17,7 @@ struct perf_tgid_entry;
 struct monitor_version_check_v1 {
 	__u32 papi_version;
 	__u32 drv_version;
-} __packed;
+} __attribute__((__packed__));
 
 #define CN_DEFAULT_CLOCKID CLOCK_MONOTONIC_RAW
 struct sbts_perf_info {

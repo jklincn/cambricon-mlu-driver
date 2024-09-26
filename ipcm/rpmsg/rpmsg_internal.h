@@ -90,7 +90,7 @@ struct ipcm_device_header {
 		/* kapi: dynamically assigned packet ID for response matching */
 		u32 packet_id;
 	};
-} __packed;
+} __attribute__((__packed__));
 
 /* The feature bitmap for virtio rpmsg */
 #define VIRTIO_RPMSG_F_NS	0 /* RP supports name service notifications */
@@ -114,7 +114,7 @@ struct rpmsg_hdr {
 	u16 len;
 	u16 flags;
 	u8 data[0];
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct rpmsg_ns_msg - dynamic name service announcement message
@@ -132,7 +132,7 @@ struct rpmsg_ns_msg {
 	char name[RPMSG_NAME_SIZE];
 	u32 addr;
 	u32 flags;
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct rpmsg_ns_msg - dynamic name service announcement message V2
@@ -152,7 +152,7 @@ struct rpmsg_ns_msg_ext {
 	u32 addr;
 	u32 flags;
 	char desc[RPMSG_NAME_SIZE];
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * struct rpmsg_as_msg - dynamic address service announcement message
@@ -172,7 +172,7 @@ struct rpmsg_as_msg {
 	u32 dst;
 	u32 src;
 	u32 flags;
-} __packed;
+} __attribute__((__packed__));
 
 /**
  * enum rpmsg_ns_flags - dynamic name service announcement flags

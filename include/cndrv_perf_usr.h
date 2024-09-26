@@ -2,12 +2,6 @@
 #ifndef __LINUX_CAMBR_PERF_H__
 #define __LINUX_CAMBR_PERF_H__
 
-#ifndef __packed
-#ifdef __GNUC__
-#define __packed __attribute__((packed))
-#endif
-#endif
-
 enum drv_async_reason {
 	/* 0 - 10 is device trigger */
 	DRV_ASYNC_REASON_INIT = 0,
@@ -279,7 +273,7 @@ struct ts_append_data {
 	__le32 debug;
 	__le32 index;
 	__le64 data;
-} __packed;
+} __attribute__((__packed__));
 
 #define COMM_DATA_SIZE (sizeof(__le64) * 4)
 #define DEBUG_NUM	20
@@ -291,7 +285,7 @@ struct task_ts_info {
 	__le64 task_start_ns;
 	__le64 task_finish_ns;
 	struct ts_append_data append_data_table[MAX_APPEND_NUM];
-} __packed;
+} __attribute__((__packed__));
 
 struct perf_ts_info_header {
 	__le64 version;

@@ -74,7 +74,7 @@ struct cd_p2pshm_info {
 	__le64 p2pshm_dev_va;
 	__le32 p2pshm_sz;
 	__le32 card_idx;
-} __packed;
+} __attribute__((__packed__));
 
 /* fixed single copy size for 4sc-algorithm */
 #define P2PSHM_SINGLE_COPY_MIN_SZ	(4U)

@@ -10,12 +10,6 @@
 #ifndef __CAMBRICON_CNDRV_MONUSR_H__
 #define __CAMBRICON_CNDRV_MONUSR_H__
 
-#ifndef __packed
-#ifdef __GNUC__
-#define __packed __attribute__((packed))
-#endif
-#endif
-
 #include "cndrv_perf_usr.h"
 
 /* AXI Monitor and PMU */
@@ -1063,12 +1057,12 @@ struct __version_check {
 	__u32 papi_version;
 	__u32 drv_version;
 	__u64 len;
-}__packed;
+}__attribute__((__packed__));
 
 struct monitor_version_check {
 	struct __version_check ver_check;
 	__u64 data[MAX_FEATURE_NUM];
-}__packed;
+}__attribute__((__packed__));
 
 /* used for ioctl _PERF_MODE_CONFIG */
 enum perf_ctrl {
@@ -1079,7 +1073,7 @@ enum perf_ctrl {
 struct perf_cfg_tasks {
 	__u64 task_type;
 	__u64 event_type;
-}__packed;
+}__attribute__((__packed__));
 
 struct perf_mode_config {
 	__u32 perf_ctrl;
@@ -1088,7 +1082,7 @@ struct perf_mode_config {
 	__u32 collection_mode;
 	__u32 performance_mode;
 	__u64 buffer_size;
-}__packed;
+}__attribute__((__packed__));
 
 struct perf_mode_config_v6 {
 	__u32 perf_ctrl;
@@ -1099,7 +1093,7 @@ struct perf_mode_config_v6 {
 	struct perf_cfg_tasks *debug_ptr;
 	__u64 ts_buffer_size;
 	__u64 mem_buffer_size;
-}__packed;
+}__attribute__((__packed__));
 
 /* used for ioctl _PERF_CLKID_CONFIG */
 enum perf_clkid_ops {
@@ -1110,7 +1104,7 @@ enum perf_clkid_ops {
 struct perf_clkid_config {
 	__u32 clkid_ops;
 	__s32 clk_id;
-} __packed;
+} __attribute__((__packed__));
 
 /* used for ioctl _PERF_TASK_TYPE_CONFIG */
 enum perf_task_type_config_ops {
@@ -1122,18 +1116,18 @@ enum perf_task_type_config_ops {
 struct perf_task_type_config {
 	__u32 ops;
 	__u64 task_type;
-} __packed;
+} __attribute__((__packed__));
 
 #define MAX_CONFIGABLE_NUM (MAX_TS_TASK_NUM + MAX_MEM_TASK_NUM)
 struct task_config_head {
 	__u32 ops;
 	__u32 len;
-} __packed;
+} __attribute__((__packed__));
 
 struct perf_task_type_config_v2 {
 	struct task_config_head head;
 	__u64 data[MAX_CONFIGABLE_NUM];
-} __packed;
+} __attribute__((__packed__));
 
 
 /* used for ioctl _PERF_TASK_INFO_SIZE_GET */
@@ -1141,18 +1135,18 @@ struct perf_info_size_get {
 	__u64 task_type;
 	__u32 normal_size;
 	__u32 append_size;
-} __packed;
+} __attribute__((__packed__));
 
 /* used for ioctl _PERF_TASK_INFO_GET */
 struct perf_task_info {
 	__u64 buffer_addr;
 	__u64 buffer_size;
-} __packed;
+} __attribute__((__packed__));
 
 struct perf_task_info_get {
 	struct perf_task_info ts_perf;
 	struct perf_task_info mem_perf;
-} __packed;
+} __attribute__((__packed__));
 
 enum monitor_perf_type {
 	TYPE_AXI_MON = 0,

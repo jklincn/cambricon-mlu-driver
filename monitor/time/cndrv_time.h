@@ -19,7 +19,7 @@ struct tk_base {
 	__le64 last_tsg_ns;
 	__le64 offset_ns;
 	__le64 offset_ns_err_per_second;
-} __packed;
+} __attribute__((__packed__));
 
 enum slave_tkb_id {
 	SLAVE_TKB_MONO = 0,
@@ -40,7 +40,7 @@ struct ts_sync_data {
 
 struct time_sync_timestamp {
 	__le64 dev_timestamp;
-} __packed;
+} __attribute__((__packed__));
 
 #define op(task_type, task_name) DECLARE_BITMAP(task_name##_bitmap, MAX_BITMAP);
 struct perf_rpc_ctrl_msg {
@@ -57,7 +57,7 @@ struct perf_rpc_ctrl_msg {
 	u64 tgid_iova;
 	u64 perf_iova;
 	__sbts_task_list(op)
-} __packed;
+} __attribute__((__packed__));
 #undef op
 
 struct perf_rpc_cfg_info {
@@ -65,12 +65,12 @@ struct perf_rpc_cfg_info {
 	u64 data_size;
 	u64 host_shm_addr;
 	u64 dev_shm_addr;
-}__packed;
+}__attribute__((__packed__));
 
 struct perf_rpc_info_get {
 	u64 dev_buf_addr;
 	u64 buffer_size;
-} __packed;
+} __attribute__((__packed__));
 
 struct tgid_shm_data {
 	u64 util;
@@ -117,7 +117,7 @@ struct perf_shm_data {
 	u32 wr_seq;
 	u32 chip_util;
 	u32 period_ns;
-} __packed;
+} __attribute__((__packed__));
 
 struct perf_process_util {
 	u64 dev_iova;

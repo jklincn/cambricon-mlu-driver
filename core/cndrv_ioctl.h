@@ -1257,7 +1257,7 @@ struct sbts_queue_invoke_task {
 	__u32 reserve;
 	__u64 res[SBTS_QUEUE_INVOKE_COMM_RES];
 	union sbts_task_priv_data priv_data __attribute__((aligned(8)));
-} __packed;
+} __attribute__((__packed__));
 
 enum sbts_cmd_type {
 	_SBTS_CREATE_QUEUE = 0,

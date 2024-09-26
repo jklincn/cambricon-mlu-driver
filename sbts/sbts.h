@@ -176,14 +176,14 @@ struct hpq_task_ack_desc {
 	__le64 seq_num;
 	__le64 sta;
 	__le64 kernel_printf_num;
-} __packed;
+} __attribute__((__packed__));
 
 struct hpq_notifier_ack_desc {
 	__le64 last_val;
 	__le64 seq_val;    /* deprecated */
 	__le64 hw_time_ns; /* hardware execution time */
 	__le64 sw_time_ns; /* software timestamp */
-} __packed;
+} __attribute__((__packed__));
 
 /* comm_task_desc->data */
 struct task_desc_data_v1 {
@@ -203,19 +203,19 @@ struct task_desc_data_v1 {
 	__le64 dev_eid;
 	__le64 dev_shm_addr;
 	__le64 priv[0];
-} __packed;
+} __attribute__((__packed__));
 
 struct task_perf_desc {
 	__le64 topo_id;
 	__le64 host_invoke_ns;
 	__le64 correlation_id;
-} __packed;
+} __attribute__((__packed__));
 
 struct task_desc_topo_priv {
 	__le64 dev_topo_id;
 	__le64 dev_topo_node_index;
 	__le64 topo_info;
-} __packed;
+} __attribute__((__packed__));
 
 #define TASK_DESC_PRIV_MAX_SIZE		\
 	(sizeof(__le64) * TASK_DESC_SIZE -	\
@@ -360,7 +360,7 @@ struct cd_create_queue {
 	__le64 dev_sid; /* dtoh return value */
 	__le64 tgid_entry_id;
 	__le64 unique_id;
-} __packed;
+} __attribute__((__packed__));
 /* ctrl_desc_data_v1->priv */
 struct cd_destroy_queue {
 	__le64 dev_sid;
@@ -421,7 +421,7 @@ struct cd_perf_tsinfo_size_get {
 	__u64 unique_seq_id;
 	__u32 normal_size;
 	__u32 append_size;
-} __packed;
+} __attribute__((__packed__));
 
 enum queue_schedule_policy {
 	QUEUE_SCH_POLICY_QFS = 0,
@@ -526,7 +526,7 @@ struct cd_p2pshm_tbl_info {
 	__le32 current_idx;
 	__le32 ncards;
 	__le64 info_iova;
-} __packed;
+} __attribute__((__packed__));
 
 struct cd_dev_topo_ctrl {
 	__le32 cmd_type;
@@ -538,7 +538,7 @@ struct cd_dev_topo_ctrl {
 	__le64 trigger_send;
 	__le64 param_send;
 	__le64 node_send;
-} __packed;
+} __attribute__((__packed__));
 
 /* cngdb function type */
 enum cngdb_task_type {
@@ -637,7 +637,7 @@ struct delay_free_set {
 struct data_ack_desc {
 	__le64 status;
 	__le64 data[0];	/* variable length */
-} __packed;
+} __attribute__((__packed__));
 
 extern int
 check_ack_data(struct cn_core_set *core, struct data_ack_desc *host_addr);
@@ -701,7 +701,7 @@ struct sbts_core_info {
 	__u64 dump_addr;
 	__u64 reserved_buf_addr;
 	/* ... */
-} __packed;
+} __attribute__((__packed__));
 
 enum sbts_work_thread_policy {
 	POLICY_DEFAULT = 0,
@@ -747,7 +747,7 @@ struct sbts_basic_info {
 	__u64 tcdp_proxy_rpc_buffer;
 	__u64 topo_node_bitmap;
 	__u64 core_info[0];
-} __packed;
+} __attribute__((__packed__));
 
 /* no need to add version in this struct,
  * cause device and host will update at the same time.
@@ -755,7 +755,7 @@ struct sbts_basic_info {
 struct sbts_hw_info {
 	__u64 size;
 	__u64 data[0];
-} __packed;
+} __attribute__((__packed__));
 
 struct sbts_set {
 	struct sched_manager *sched_manager;
